@@ -1,0 +1,23 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/cron/tasks",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/daily",
+      "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/leaderboard",
+      "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/cron/insights",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

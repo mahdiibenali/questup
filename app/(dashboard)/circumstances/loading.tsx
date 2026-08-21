@@ -1,0 +1,1 @@
+﻿export default function Loading() { return (<div className="space-y-4 p-1"><div className="h-8 w-40 bg-bg-hover rounded-lg animate-skeleton-pulse" /><div className="space-y-3">{[1,2,3].map(i=>(<div key={i} className="h-24 bg-bg-elevated border border-border rounded-xl animate-skeleton-pulse" />))}</div></div>); }

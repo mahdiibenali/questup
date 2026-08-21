@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// MODELS
+// ══════════════════════════════════════════════════════════════════════
+
+// ── NextAuth Required Models ───────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── Application Models ─────────────────────────────────────────────
+
+model User {
+  id                    String   @id @default(cuid())
+  name                  String
+  email                 String   @unique
+  emailVerified         DateTime?
+  image                 String?
+  facebookId            String?  @unique
+  level                 Int      @default(1)
+  totalXp               Int      @default(0)
+  currentLevelXp        Int      @default(0)
+  circumstancesModifier Float    @default(1.0)
+  circumstancesProfile  String?
+  freezeTokens          Int      @default(0)
+  timezone              String   @default("UTC")
+  timezoneOffset        Int      @default(0)
+  privacyPreference     String   @default("friends")
+  friendDiscovery       Boolean  @default(false)
+  emailNotifications    Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  goals            Goal[]
+  tasks            Task[]
+  challenges       Challenge[]
+  xpTransactions   XpTransaction[]
+  streaks          Streak[]
+  achievements     UserAchievement[]
+  friends          Friendship[]         @relation("UserFriendships")
+  friendOf         Friendship[]         @relation("FriendFriendships")
+  leaderboardEntries LeaderboardEntry[]
+  peerReviewsGiven PeerReview[]         @relation("PeerReviewReviewer")
+
+  @@index([email])
+  @@index([facebookId])
+  @@index([totalXp])
+  @@index([level])
+}
+
+model Goal {
+  id               String      @id @default(cuid())
+  userId           String
+  title            String
+  description      String?
+  category         String
+  frequency        String
+  estimatedMinutes Int?
+  difficulty       Int         @default(3)
+  status           String      @default("active")
+  isPublic         Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+  streaks    Streak[]
+  milestones Milestone[]
+
+  @@index([userId, status])
+  @@index([userId, category])
+}
+
+model Task {
+  id                  String    @id @default(cuid())
+  goalId              String
+  userId              String
+  scheduledDate       DateTime
+  status              String    @default("pending")
+  completedAt         DateTime?
+  proofUrl            String?
+  proofPhash          String?
+  proofGps            String?
+  proofText           String?
+  aiConfidence        Int?
+  aiVerified          Boolean?
+  aiRejectionReason   String?
+  xpEarned            Int?
+  aiXpMultiplier      Float?
+  aiRationale         String?
+  submissionCount     Int       @default(0)
+  peerReviewRequested Boolean   @default(false)
+  peerReviewVerdict   String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  goal          Goal            @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge     Challenge?      @relation("ChallengeProof")
+  peerReviews   PeerReview[]
+
+  @@unique([goalId, scheduledDate])
+  @@index([userId, scheduledDate])
+  @@index([userId, status])
+  @@index([goalId, scheduledDate])
+  @@index([userId, createdAt])
+}
+
+model Challenge {
+  id           String    @id @default(cuid())
+  userId       String
+  date         DateTime
+  type         String
+  title        String
+  description  String
+  category     String
+  xpReward     Int
+  difficulty   Int       @default(3)
+  status       String    @default("pending")
+  completedAt  DateTime?
+  proofTaskId  String?   @unique
+  createdAt    DateTime  @default(now())
+
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proofTask Task? @relation("ChallengeProof", fields: [proofTaskId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, date, type])
+  @@index([userId, date])
+  @@index([date])
+  @@index([proofTaskId])
+}
+
+model XpTransaction {
+  id         String     @id @default(cuid())
+  userId     String
+  amount     Int
+  sourceType String
+  sourceId   String?
+  metadata   String?
+  createdAt  DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, sourceType])
+  @@index([sourceType, sourceId])
+}
+
+model Streak {
+  id            String    @id @default(cuid())
+  userId        String
+  goalId        String
+  currentStreak Int       @default(0)
+  bestStreak    Int       @default(0)
+  lastCompleted DateTime?
+  freezeUsed    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, goalId])
+  @@index([userId])
+}
+
+model Milestone {
+  id         String    @id @default(cuid())
+  goalId     String
+  type       String
+  threshold  Int
+  xpReward   Int
+  badgeIcon  String?
+  achievedAt DateTime?
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, type, threshold])
+  @@index([goalId])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  title       String
+  description String
+  icon        String
+  xpReward    Int
+  category    String?
+  createdAt   DateTime @default(now())
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@id([userId, achievementId])
+  @@index([userId])
+}
+
+model Friendship {
+  userId    String
+  friendId  String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendFriendships", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@id([userId, friendId])
+  @@index([userId, status])
+  @@index([friendId, status])
+}
+
+model LeaderboardEntry {
+  userId    String
+  weekStart DateTime
+  weeklyXp  Int      @default(0)
+  rank      Int?
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, weekStart])
+  @@index([weekStart, rank])
+  @@index([weekStart, weeklyXp])
+}
+
+model PeerReview {
+  id         String    @id @default(cuid())
+  taskId     String
+  reviewerId String
+  verdict    String?
+  comment    String?
+  createdAt  DateTime  @default(now())
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reviewer User @relation("PeerReviewReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@unique([taskId, reviewerId])
+  @@index([taskId])
+  @@index([reviewerId])
+}
