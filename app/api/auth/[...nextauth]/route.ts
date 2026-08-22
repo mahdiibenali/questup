@@ -5,7 +5,6 @@ import FacebookProvider from "next-auth/providers/facebook";
 import { hash, compare } from "bcryptjs";
 import { db } from "@/server/db/prisma";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const providers: any[] = [
   CredentialsProvider({
     name: "email",
